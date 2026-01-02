@@ -1,0 +1,28 @@
+name: spark-services
+services:
+  vllm:
+    image: gionata/spark-vllm-qwen3vl:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.spark-vllm-qwen3vl
+      args:
+        PORT: ${PORT:-8001}
+    restart: unless-stopped
+    ipc: host
+    gpus: all
+    environment:
+      MODEL: ${MODEL:-Qwen/Qwen3-VL-30B-A3B-Instruct}
+      PORT: ${PORT:-8001}
+      GPU_MEMORY_UTILIZATION: ${GPU_MEMORY_UTILIZATION:-0.8}
+      VLLM_API_KEY: ${VLLM_API_KEY:-}
+    ports:
+      - ${PORT:-8001}:${PORT:-8001}
+    volumes:
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+    healthcheck:
+      test: >
+        CMD-SHELL if [ -n "${VLLM_API_KEY}" ]; then curl -fsS -H "Authorization: Bearer ${VLLM_API_KEY}" http://localhost:${PORT:-8001}/v1/models || exit 1; else curl -fsS http://localhost:${PORT:-8001}/v1/models || exit 1; fi
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
