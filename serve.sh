@@ -10,13 +10,13 @@ DOCKER_IMAGE="gionata/spark-vllm-qwen3vl:latest"
 # GPU_MEMORY_UTILIZATION - default: 0.8
 # VLLM_API_KEY - default: (none)
 
-docker run --rm -it \
+docker run -d --rm \
     --gpus all \
     --ipc=host \
     -p ${PORT:-8001}:${PORT:-8001} \
     -e MODEL="${MODEL:-Qwen/Qwen3-VL-30B-A3B-Instruct}" \
     -e PORT="${PORT:-8001}" \
-    -e GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.8}" \
+    -e GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.85}" \
     ${VLLM_API_KEY:+-e VLLM_API_KEY="$VLLM_API_KEY"} \
     -v ~/.cache/huggingface:/root/.cache/huggingface \
     ${DOCKER_IMAGE}
