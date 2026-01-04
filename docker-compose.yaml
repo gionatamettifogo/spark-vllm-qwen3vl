@@ -1,3 +1,7 @@
+#
+# docker-compose.yaml
+#
+
 name: spark-services
 services:
   vllm:
@@ -13,7 +17,7 @@ services:
     environment:
       MODEL: ${MODEL:-Qwen/Qwen3-VL-30B-A3B-Instruct}
       PORT: ${PORT:-8001}
-      GPU_MEMORY_UTILIZATION: ${GPU_MEMORY_UTILIZATION:-0.8}
+      GPU_MEMORY_UTILIZATION: ${GPU_MEMORY_UTILIZATION:-0.75}
       VLLM_API_KEY: ${VLLM_API_KEY:-}
     ports:
       - ${PORT:-8001}:${PORT:-8001}
