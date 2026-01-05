@@ -2,15 +2,10 @@
 # Serve Qwen3-VL-30B-A3B-Instruct using vLLM on DGX Spark
 # Image: gionata/spark-vllm-qwen3vl (based on avarok/vllm-dgx-spark)
 
-DOCKER_IMAGE="gionata/spark-vllm-qwen3vl:latest"
+#DOCKER_IMAGE="gionata/spark-vllm-qwen3vl:latest"
+DOCKER_IMAGE="nvcr.io/nvidia/vllm:25.12.post1-py3"
 
-# Configuration via environment variables (optional overrides)
-# MODEL - default: Qwen/Qwen3-VL-30B-A3B-Instruct
-# PORT - default: 8001
-# GPU_MEMORY_UTILIZATION - default: 0.8
-# VLLM_API_KEY - default: (none)
-
-docker run -d --rm \
+docker run --rm \
     --gpus all \
     --ipc=host \
     -p ${PORT:-8001}:${PORT:-8001} \
