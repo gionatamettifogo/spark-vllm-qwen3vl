@@ -1,0 +1,84 @@
+#
+# docker-compose.yaml
+#
+# Runs Qwen3vl with fp8 quantization by default as it performs pretty much the same
+# as full precision but using much less GPU memory and with bit better performance
+# https://huggingface.co/Qwen/Qwen3-VL-30B-A3B-Instruct-FP8
+#
+# Embeddings using vLLM take up too much memory to run side by side with Qwen3vl
+# https://github.com/michaelfeil/infinity
+
+name: spark-services
+
+services:
+
+  vllm-qwen3-embed:
+    container_name: vllm-qwen3-embed
+    image: nvcr.io/nvidia/vllm:25.12.post1-py3
+    restart: unless-stopped
+    ipc: host
+    gpus: all
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    environment:
+      EMBED_MODEL: ${EMBED_MODEL:-Qwen/Qwen3-Embedding-0.6B}
+      EMBED_CONTEXT_WINDOW: ${EMBED_CONTEXT_WINDOW:-32768}
+      EMBED_API_KEY: ${EMBED_API_KEY:-very-secret-key-to-be-replaced}
+      OMP_NUM_THREADS: 1
+    ports:
+      - ${EMBED_PORT:-8002}:8000
+    volumes:
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+    command: >
+      sh -c '
+        vllm serve $${EMBED_MODEL} \
+          --runner pooling \
+          --dtype auto \
+          --gpu-memory-utilization 0.08 \
+          --max-model-len $${EMBED_CONTEXT_WINDOW} \
+          --api-key $${EMBED_API_KEY}
+      '
+    healthcheck:
+      test: >
+        curl -f -H "Authorization: Bearer $${EMBED_API_KEY}" http://localhost:8000/v1/models || exit 1
+      start_period: 180s
+      interval: 120s
+      timeout: 10s
+      retries: 3
+
+  sglang-qwen3-vl:
+    container_name: sglang-qwen3-vl
+    image: lmsysorg/sglang:latest
+    restart: unless-stopped
+    depends_on:
+      # sglang-qwen3-vl does not "depend" on the embed service but since it is a
+      # memory hog it's best if the leaner embed start first and vl takes the rest
+      vllm-qwen3-embed:
+        condition: service_healthy
+    ipc: host
+    gpus: all
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    environment:
+      LLM_MODEL: ${LLM_MODEL:-Qwen/Qwen3-VL-30B-A3B-Instruct-FP8}
+      LLM_CONTEXT_WINDOW: ${LLM_CONTEXT_WINDOW:-240000}
+      LLM_API_KEY: ${LLM_API_KEY:-very-secret-key-to-be-replaced}
+      # CPU tasks are best limited to single thread
+      OMP_NUM_THREADS: 1
+      # Fix for Triton PTXAS error on sm_121a
+      TRITON_PTXAS_PATH: /usr/local/cuda/bin/ptxas
+    ports:
+      - ${LLM_PORT:-8001}:8000
+    volumes:
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+    command: >
+      sh -c 'python3 -m sglang.launch_server --model-path $${LLM_MODEL} --port 8000 --host 0.0.0.0 --context-length $${LLM_CONTEXT_WINDOW} --api-key $${LLM_API_KEY} --mem-fraction-static 0.60 --trust-remote-code --mm-attention-backend sdpa'
+    healthcheck:
+      test: >
+        curl -fsS -H "Authorization: Bearer $${LLM_API_KEY}" http://localhost:8000/v1/models || exit 1
+      start_period: 180s
+      interval: 60s
+      timeout: 10s
+      retries: 3
