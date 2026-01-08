@@ -31,7 +31,7 @@ services:
       LLM_CONTEXT_WINDOW: ${LLM_CONTEXT_WINDOW:-240000}
       LLM_API_KEY: ${LLM_API_KEY:-very-secret-key-to-be-replaced}
       # Force FlashInfer backend to avoid SDPA fallbacks which may be unstable
-      # VLLM_ATTENTION_BACKEND: FLASHINFER
+      # VLLM_ATTENTION_BACKEND: FLASHINFER 
       # CPU tasks are best limited to single thread
       OMP_NUM_THREADS: 1
     ports:
@@ -39,7 +39,7 @@ services:
     volumes:
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface
     command: >
-      sh -c 'vllm serve $${LLM_MODEL} --dtype auto --gpu-memory-utilization 0.70 --limit-mm-per-prompt.video 0 --max-model-len $${LLM_CONTEXT_WINDOW} --api-key $${LLM_API_KEY}'
+      sh -c 'vllm serve $${LLM_MODEL} --dtype auto --gpu-memory-utilization 0.75 --limit-mm-per-prompt.video 0 --max-model-len $${LLM_CONTEXT_WINDOW} --api-key $${LLM_API_KEY}'
     healthcheck:
       test: >
         curl -fsS -H "Authorization: Bearer $${LLM_API_KEY}" http://localhost:8000/v1/models || exit 1
